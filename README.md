@@ -17,7 +17,7 @@ php7 support
 
 Q&A
 ==================
-if report error "Binary URP bridge disposed during call" <br\>
+if report error "Binary URP bridge disposed during call" </br>
 run cmd `nohup /opt/libreoffice6.0/program/soffice "--accept=socket,host=localhost,port=3536;urp;StarOffice.ServiceManager" &`
 
 
