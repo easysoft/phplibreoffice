@@ -1,0 +1,76 @@
+# $(PRJ) is the directory of the OpenOffice SDK
+
+SETTINGS=$(PRJ)/settings
+
+include $(SETTINGS)/settings.mk
+include $(SETTINGS)/dk.mk
+
+
+
+
+UNOPKG_EXT=uno.pkg
+UNOOXT_EXT=oxt
+
+
+## Define where cppumaker should create the automatic generated headers and sources require to compile an OpenOffice application
+OUT_BIN=$(phplibdir)
+OUT_INC=$(OUT)/inc
+OUT_SLO=$(OUT)/slo
+OUT_LIB=$(OUT)/lib
+OUT_SLB=$(OUT)/slb
+OUT_MISC=$(OUT)/misc
+OUT_OBJ=$(OUT)/obj
+OUT_CLASS=$(OUT)/class
+IDL_DIR=$(PRJ)/idl
+BIN_DIR=$(PRJ)/$(PLATFORM)/bin
+CLASSES_DIR=$(PRJ)/classes
+URE_CLASSES_DIR=$(subst \,/,$(OO_SDK_URE_JAVA_DIR))
+OFFICE_CLASSES_DIR=$(subst \,/,$(OFFICE_BASE_PROGRAM_PATH))/classes
+COMP_PACKAGE_DIR=$(subst /,$(PS),$(OUT_BIN))
+
+URE_TYPES="$(PHP_PUNO_URE_TYPES_RDB_PATH)"
+#URE_SERVICES=$(subst \\,\,$(URE_MISC)$(PS)services.rdb)
+
+OFFICE_TYPES="$(PHP_PUNO_PROGRAM_OFFAPI_RDB_PATH)"
+#OFFICE_SERVICES=$(subst \\,\,$(OFFICE_BASE_PROGRAM_PATH)$(PS)services.rdb)
+
+ 
+
+OFFICE_TYPE_LIBRARY="$(OFFICE_TYPES)"
+
+CPPUMAKER="$(OO_SDK_HOME)/bin/cppumaker"
+
+OUT_COMP_INC = $(OUT_INC)/$(COMPONENT_NAME)
+
+COMPOENNT_ENV_FLAG = $(OUT_MISC)/cpp_$(COMPONENT_NAME)_prepare_env.flag
+COMPONENT_TYPEFLAG = $(OUT_MISC)/cpp_$(COMPONENT_NAME)_types.flag
+
+
+TYPES =
+
+TYPESLIST = $(foreach t,$(TYPES),-T$(t))
+
+
+include $(SETTINGS)/stdtarget.mk
+
+
+cppumaker :
+	@echo --------------------------------------------------------------------------------
+	@echo                 Generating C++ representations for idl types.
+	@echo                           THIS MAY TAKE A WHILE!!
+	@echo --------------------------------------------------------------------------------
+	-$(MKDIR) $(subst /,$(PS),$(@D))
+	-$(DEL) $(subst /,$(PS),$(COMPONENT_TYPEFLAG))
+	$(CPPUMAKER) -Gc  -O$(OUT_COMP_INC)    $(URE_TYPES) $(OFFICE_TYPES)
+	echo flagged > $@
+	
+ 
+
+
+	
+
+
+
+
+
+
