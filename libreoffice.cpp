@@ -106,8 +106,6 @@ PHP_MINIT_FUNCTION(libreoffice) {
     x_compnt_fact_cli_rsrc_dtor = zend_register_list_destructors_ex(x_compnt_fact_cli_rsrc_dtor_hdlr, NULL, "XMultiComponentFactoryClient_resource_destructor", module_number);
     x_simple_reg_rsrc_dtor = zend_register_list_destructors_ex(x_simple_reg_rsrc_dtor_hdlr, NULL, "XSimpleRegistry_resource_destructor", module_number);
 
-
-
     //register constants
 #include "libreoffice_constants.c"
     return SUCCESS;
@@ -115,7 +113,7 @@ PHP_MINIT_FUNCTION(libreoffice) {
 
 //PHP_METHOD(libreoffice, save) {
 //    char *path;
-//    int path_len = 0;
+//    size_t path_len = 0;
 //    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &path, &path_len) == FAILURE) {
 //    }
 //    try {
@@ -128,7 +126,7 @@ PHP_MINIT_FUNCTION(libreoffice) {
 
 //PHP_METHOD(libreoffice, openDoc) {
 //    char *path;
-//    int path_len = 0;
+//    size_t path_len = 0;
 //    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &path, &path_len) == SUCCESS) {
 //        zend_update_property_string(ce_ptr, getThis(), ZEND_STRL("path"), path TSRMLS_CC);
 //    }
@@ -145,7 +143,7 @@ PHP_MINIT_FUNCTION(libreoffice) {
 PHP_METHOD(libreoffice, __construct) {//do noting now
     int rsrc_id;
     char *str;
-    int str_len = 0;
+    size_t str_len = 0;
     PUNO_DEBUG("get_remote_xcomponent - %d<BR>", time(NULL));
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s", &str, &str_len) == FAILURE) {
     }
@@ -171,7 +169,7 @@ PHP_METHOD(libreoffice, __construct) {//do noting now
         TEST_PTR(client_component_factory.is(),);
         //register the client factory as a resource, so the dispose method can be called at the end of the script execution
         ZEND_REGISTER_RESOURCE(NULL, new Reference<XMultiComponentFactory>(client_component_factory), x_compnt_fact_cli_rsrc_dtor);
-
+        
         PUNO_DEBUG("x_compnt_fact_cli - %d<BR>", time(NULL));
 
 
@@ -270,10 +268,13 @@ PHP_METHOD(libreoffice, __construct) {//do noting now
         //        libreoffice_class_object *this_instance_p;
         //        this_instance_p = (libreoffice_class_object *) zend_object_store_get_object(return_value TSRMLS_CC);
 
-
         libreoffice_class_object *this_instance_p;
-        //        this_instance_p = (libreoffice_class_object *)getThis();
-        this_instance_p = (libreoffice_class_object *) zend_object_store_get_object(getThis() TSRMLS_CC);
+#if PHP_MAJOR_VERSION <7
+        this_instance_p = (libreoffice_class_object *) zend_object_store_get_object(getThis() TSRMLS_CC);  
+#else
+        zval *this_obj = getThis();
+        this_instance_p = (libreoffice_class_object *)Z_OBJ_P(this_obj);
+#endif
         TEST_PTR(this_instance_p,);
 
         //store the XComponentLoader Reference

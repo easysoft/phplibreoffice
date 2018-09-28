@@ -14,7 +14,7 @@
   +----------------------------------------------------------------------+
   | Author: Rotsen Marcello <rotsen.marcello@wstech2.net>                |
   +----------------------------------------------------------------------+
-*/
+ */
 
 
 
@@ -26,12 +26,15 @@
 #include "config.h"
 #endif
 
-extern "C" {
+extern "C"
+{
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
 #include "zend_exceptions.h"
+#include "php7_wrapper.h"
 }
+
 
 #include <stdio.h>
 #include <osl/file.hxx>
@@ -78,51 +81,67 @@ using namespace com::sun::star::uno;
 using namespace rtl;
 using namespace std;
 
-PHP_MINIT_FUNCTION( libreoffice);
-PHP_MSHUTDOWN_FUNCTION( libreoffice);
-PHP_RINIT_FUNCTION( libreoffice);
-PHP_RSHUTDOWN_FUNCTION( libreoffice);
-PHP_MINFO_FUNCTION( libreoffice);
+PHP_MINIT_FUNCTION(libreoffice);
+PHP_MSHUTDOWN_FUNCTION(libreoffice);
+PHP_RINIT_FUNCTION(libreoffice);
+PHP_RSHUTDOWN_FUNCTION(libreoffice);
+PHP_MINFO_FUNCTION(libreoffice);
 
-ZEND_FUNCTION( get_remote_xcomponent);
-ZEND_FUNCTION( create_struct);
+ZEND_FUNCTION(get_remote_xcomponent);
+ZEND_FUNCTION(create_struct);
 
 //resource destrutor handlers
-void libreoffice_refer_rsrc_dtor_hdlr (zend_rsrc_list_entry *rsrc TSRMLS_DC);
-void libreoffice_any_rsrc_dtor_hdlr (zend_rsrc_list_entry *rsrc TSRMLS_DC);
-void x_compnt_fact_cli_rsrc_dtor_hdlr (zend_rsrc_list_entry *rsrc TSRMLS_DC);
-void x_simple_reg_rsrc_dtor_hdlr (zend_rsrc_list_entry *rsrc TSRMLS_DC);
+void libreoffice_refer_rsrc_dtor_hdlr(zend_rsrc_list_entry *rsrc TSRMLS_DC);
+void libreoffice_any_rsrc_dtor_hdlr(zend_rsrc_list_entry *rsrc TSRMLS_DC);
+void x_compnt_fact_cli_rsrc_dtor_hdlr(zend_rsrc_list_entry *rsrc TSRMLS_DC);
+void x_simple_reg_rsrc_dtor_hdlr(zend_rsrc_list_entry *rsrc TSRMLS_DC);
 
 //conversion any to zval
 zval *create_zval_from_any(com::sun::star::uno::Any TSRMLS_DC);
-com::sun::star::uno::Any create_any_from_zval(zval ** TSRMLS_DC);
+com::sun::star::uno::Any create_any_from_zval(zval * TSRMLS_DC);
 
 //user space functions
 void
-		create_struct_ex(zval *, com::sun::star::uno::Any *, char *,
-				int TSRMLS_DC);
+create_struct_ex(zval *, com::sun::star::uno::Any *, char *,
+        int TSRMLS_DC);
 
 //object handling methods
+#if PHP_MAJOR_VERSION<7
 zval *libreoffice_class_read_property(zval *object, zval *member, int t TSRMLS_DC);
 void libreoffice_class_write_property(zval *object, zval *member, zval *value TSRMLS_DC);
 int libreoffice_class_call_method(char *method, INTERNAL_FUNCTION_PARAMETERS);
 static zend_object_value libreoffice_class_object_new(zend_class_entry *class_type TSRMLS_DC);
 static union _zend_function *libreoffice_class_get_method(zval **object, char *name, int len TSRMLS_DC);
+#else
+zval *libreoffice_class_read_property(zval *object, zval *member, int t , void **cache_slot, zval *rv);
+void libreoffice_class_write_property(zval *object, zval *member, zval *value ,void **cache_slot);
+int libreoffice_class_call_method(char *method, INTERNAL_FUNCTION_PARAMETERS);
+static zend_object* libreoffice_class_object_new(zend_class_entry *class_type );
+static union _zend_function *libreoffice_class_get_method(zend_object **object, zend_string *name,const zval *key);
+#endif
 
 #define TEST_PTR( ptr , ret_type ) if(!ptr) { zend_throw_exception(zend_exception_get_default(),"Invalid Resource or Name!",0 TSRMLS_CC); return  ret_type; }
 
 //#define PUNO_DEBUG( message, ...) if(PUNO_G(debug_mode)) { php_printf( message, __VA_ARGS__ ); }
 #define PUNO_DEBUG( message, ...) 
 
-
-ZEND_BEGIN_MODULE_GLOBALS( libreoffice)
+#if PHP_MAJOR_VERSION<7
+ZEND_BEGIN_MODULE_GLOBALS(libreoffice)
 int x_idl_reflec_rsrc_id;
 int remote_service_factory_rsrc_id;
 int x_type_conv_rsrc_id;
 zend_bool debug_mode;
-ZEND_END_MODULE_GLOBALS( libreoffice)
+ZEND_END_MODULE_GLOBALS(libreoffice)
+#else
+ZEND_BEGIN_MODULE_GLOBALS(libreoffice)
+zend_resource* x_idl_reflec_rsrc_id;
+zend_resource* remote_service_factory_rsrc_id;
+zend_resource* x_type_conv_rsrc_id;
+zend_bool debug_mode;
+ZEND_END_MODULE_GLOBALS(libreoffice)
+#endif
 
-ZEND_DECLARE_MODULE_GLOBALS( libreoffice)
+ZEND_DECLARE_MODULE_GLOBALS(libreoffice)
 
 /* In every utility function you add that needs to use variables 
  in php_libreoffice_globals, call TSRMLS_FETCH(); after declaring other
@@ -154,12 +173,19 @@ static zend_class_entry *ce_ptr;
 static zend_object_handlers libreoffice_class_handlers;
 
 /* struct para controle da classe */
-typedef struct _libreoffice_class_object {
-	zend_object std;
-	int this_rsrc_id;
-	int x_idl_class_rsrc_id;
-	int x_invoc_rsrc_id;
-	TypeClass type;
+typedef struct _libreoffice_class_object
+{
+    zend_object std;
+#if PHP_MAJOR_VERSION<7
+    int this_rsrc_id;
+    int x_idl_class_rsrc_id;
+    int x_invoc_rsrc_id;
+#else
+    zend_resource* this_rsrc_id;
+    zend_resource* x_idl_class_rsrc_id;
+    zend_resource* x_invoc_rsrc_id;
+#endif
+    TypeClass type;
 } libreoffice_class_object;
 
 PHP_METHOD(libreoffice, __construct);
@@ -168,7 +194,7 @@ PHP_METHOD(libreoffice, __construct);
 //PHP_METHOD(libreoffice, exportPdf);
 //PHP_METHOD(libreoffice, exportHtml);
 
-#endif	/* PHP_PUNO_H */
+#endif /* PHP_PUNO_H */
 
 /*
  * Local variables:

@@ -1,7 +1,7 @@
 php libreoffice support
 ====
 
-bring uno api to php5, and make is easy to use, fork from Puno
+bring uno api to php, and make is easy to use, fork from Puno
 
 Installation Guide
 ==================
@@ -11,9 +11,6 @@ phpize
 ./configure
 make install
 
-TODO
-==================
-php7 support
 
 Q&A
 ==================

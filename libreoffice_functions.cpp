@@ -22,11 +22,10 @@
 
 ZEND_FUNCTION(create_struct) {
     char *str;
-    int str_len;
+    size_t str_len;
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &str_len) == FAILURE) {
         return;
     }
-
     create_struct_ex(return_value, NULL, str, str_len TSRMLS_CC);
 }
 
@@ -38,9 +37,13 @@ void create_struct_ex(zval *retval, Any *anyval, char *str, int str_len TSRMLS_D
     try {
 
         //restore XIdlReflection resource
-        x_idl_reflec_p =
-                (Reference <XIdlReflection> *) zend_list_find(
-                PUNO_G(x_idl_reflec_rsrc_id), &type);
+
+#if PHP_MAJOR_VERSION <7
+        x_idl_reflec_p = (Reference <XIdlReflection> *) zend_list_find(PUNO_G(x_idl_reflec_rsrc_id), &type);
+#else
+        x_idl_reflec_p = (Reference <XIdlReflection> *)libre_fetch_resource(PUNO_G(x_idl_reflec_rsrc_id), "x_idl_reflec_rsrc_id", &type);
+#endif
+
         TEST_PTR(x_idl_reflec_p,);
         Reference <XIdlClass> xIdlClass = (*x_idl_reflec_p)->forName(OUString(str, str_len, RTL_TEXTENCODING_ISO_8859_15, OSTRING_TO_OUSTRING_CVTFLAGS));
         TEST_PTR(xIdlClass.is(),);
@@ -57,28 +60,26 @@ void create_struct_ex(zval *retval, Any *anyval, char *str, int str_len TSRMLS_D
 
         //init object
         object_init_ex(retval, ce_ptr);
-        libreoffice_class_object *new_struct_p;
-        new_struct_p =
-                (libreoffice_class_object *) zend_object_store_get_object(retval TSRMLS_CC);
+#if PHP_MAJOR_VERSION <7
+        libreoffice_class_object *new_struct_p = (libreoffice_class_object *) zend_object_store_get_object(retval TSRMLS_CC);
+#else
+        libreoffice_class_object *new_struct_p = (libreoffice_class_object*) Z_OBJ_P(retval);
+#endif
         TEST_PTR(new_struct_p,);
         //type is Structs
         new_struct_p->type = TypeClass_STRUCT;
 
         //register and store the Any object
-        rsrc_id = ZEND_REGISTER_RESOURCE(
+        new_struct_p->this_rsrc_id = ZEND_REGISTER_RESOURCE(
                 NULL, any_obj_p,
                 uno_any_rsrc_dtor);
-        TEST_PTR(rsrc_id,);
-        new_struct_p->this_rsrc_id = rsrc_id;
 
         //register and store the XIdlClass Interface
         Reference <XIdlClass> *x_idl_class_p = new Reference <XIdlClass> (xIdlClass);
         TEST_PTR(x_idl_class_p,);
-        rsrc_id = ZEND_REGISTER_RESOURCE(
+        new_struct_p->x_idl_class_rsrc_id = ZEND_REGISTER_RESOURCE(
                 NULL, x_idl_class_p,
                 uno_refer_rsrc_dtor);
-        TEST_PTR(rsrc_id,);
-        new_struct_p->x_idl_class_rsrc_id = rsrc_id;
 
     } catch (Exception& e) {
         //throw PHP EXCEPTION
@@ -91,8 +92,8 @@ ZEND_FUNCTION(get_remote_xcomponent) {
     char *str;
     char *rdb_component_path;
     char *str_instance;
-    int str_instance_len;
-    int str_len;
+    size_t str_instance_len;
+    size_t str_len;
     PUNO_DEBUG("get_remote_xcomponent - %d<BR>", time(NULL));
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &str, &str_len, &str_instance, &str_instance_len) == FAILURE) {
         return;
@@ -249,7 +250,12 @@ ZEND_FUNCTION(get_remote_xcomponent) {
         //
         object_init_ex(return_value, ce_ptr);
         libreoffice_class_object *this_instance_p;
+#if PHP_MAJOR_VERSION <7
         this_instance_p = (libreoffice_class_object *) zend_object_store_get_object(return_value TSRMLS_CC);
+#else
+        this_instance_p = (libreoffice_class_object *) Z_OBJ_P(return_value);
+#endif
+
         TEST_PTR(this_instance_p,);
 
         //store the XComponentLoader Reference
